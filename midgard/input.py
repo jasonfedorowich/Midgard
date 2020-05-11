@@ -27,6 +27,14 @@ hat_motions = {
 }
 
 
+
+class Input:
+
+    def __init__(self):
+        pass
+
+
+
 class Controller:
 
     def __init__(self):

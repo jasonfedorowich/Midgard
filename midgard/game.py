@@ -3,7 +3,7 @@ import pygame
 
 from midgard.camera import Camera
 from midgard.constants import LEVEL_SCALE_HEIGHT, LEVEL_SCALE_WIDTH
-from midgard.controller import Controller, buttons_to_keys
+from midgard.input import Controller, buttons_to_keys
 from midgard.level import Level1
 from midgard.player import Player
 from midgard.settings import Settings

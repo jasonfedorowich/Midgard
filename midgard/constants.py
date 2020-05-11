@@ -10,6 +10,9 @@ LEVEL_SCALE_HEIGHT = 3.7
 HERO_HEIGHT_CORRECTION = 21.5
 LEVEL_WIDTH_CORRECTION = 70.0
 
+#Hero constants
+
+
 def get_time_millis():
     return round(datetime.utcnow().timestamp() * 1000)
 
@@ -18,7 +21,7 @@ class HeroConstants:
 
     def __init__(self):
         self.jump_speed = 7.0
-        self.PLAYER_SPRITE_SHEET_LOCATION = 'images/hero_spritesheet.bmp'
+        self.PLAYER_SPRITE_SHEET_LOCATION = '../images/hero_spritesheet.bmp'
         self.HERO_SCALE_SIZE = 2.679
         self.MAX_JUMP_HEIGHT = 150
         self.right_idle_list = [(2, 10, 28, 24), (35, 10, 30, 24), (132, 10, 28, 24)]
@@ -35,3 +38,9 @@ class HeroConstants:
         self.left_attacking = (2, 223, 30, 28, 7, 3)
         self.left_hit = (2, 260, 30, 28, 4, 3)
         self.left_dead = (2, 292, 30, 28, 7, 3)
+
+
+class EnemyConstants:
+
+    def __init__(self):
+        self.SOILDER_FILE_LOCATION = '../images/Gladiator-Sprite Sheet.bmp'

@@ -1,18 +1,17 @@
 import pygame
 
-from constants import get_time_millis
-from timer import Timer
+from midgard.timer import Timer
 
 
 class Animation:
 
-    def __init__(self, animation_dictionary):
+    def __init__(self, animation_dictionary, refresh_rate):
         self.dictionary = animation_dictionary
         self.current_frame = 0
         self.last_frame_updated = 0
         self.time_of_last_update = 0
         self.current_frames = None
-        self.animation_refresh_rate = 100
+        self.animation_refresh_rate = refresh_rate
         self.clock = Timer()
 
     def set_frames(self, frame_name):

@@ -1,4 +1,4 @@
-from vector2d import Vector2D
+from midgard.vector2d import Vector2D
 
 
 class Camera:

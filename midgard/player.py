@@ -4,10 +4,10 @@ from enum import Enum
 import pygame
 from pygame.sprite import Sprite
 
-from animation import Animation
-from constants import HeroConstants, MAX_HERO_SPEED, LEVEL_SCALE_HEIGHT, HERO_HEIGHT_CORRECTION
-from sprite import SpriteSheet
-from vector2d import Vector2D
+from midgard.animation import Animation
+from midgard.constants import HeroConstants, MAX_HERO_SPEED, HERO_HEIGHT_CORRECTION
+from midgard.sprite import SpriteSheet
+from midgard.vector2d import Vector2D
 
 
 class Direction(Enum):
@@ -40,6 +40,8 @@ class PlayerState:
             if self.player.game.level.collide_with_wall(self.player):
                 self.player.vector.x = old_pos
 
+        self.player.game.level.check_player_enemy_collisions(self.player)
+
 
 class WalkState(PlayerState):
 
@@ -55,6 +57,9 @@ class WalkState(PlayerState):
         else:
             self.player.animation.set_frames('left_walking')
             self._update_x( 'left')
+
+        if not self.player.game.level.is_on_platform(self.player):
+            self.player.state = MoveDownState(self.player)
 
 
 class MoveUpState(PlayerState):
@@ -160,6 +165,28 @@ class JumpUpWalkState(PlayerState):
             self.player.vector.y -= self.player.player_constants.jump_speed
 
 
+class MovingAttackState(PlayerState):
+
+    def __init__(self, player):
+        super().__init__(player)
+
+    def update(self):
+
+        if self.player.direction_facing == Direction.RIGHT:
+            if self.player.animation.set_frames('right_attack'):
+                self.player.state = WalkState(self.player)
+                return
+            self._update_x('right')
+        else:
+            if self.player.animation.set_frames('left_attack'):
+                self.player.state = WalkState(self.player)
+                return
+            self._update_x('left')
+
+        if not self.player.game.level.is_on_platform(self.player):
+            self.player.state = MoveDownState(self.player)
+
+
 class Player(Sprite):
 
     def __init__(self, game):
@@ -185,7 +212,7 @@ class Player(Sprite):
 
         self.vector = Vector2D()
 
-        self.animation = Animation(self.hero_spritesheet_dictionary)
+        self.animation = Animation(self.hero_spritesheet_dictionary, 100)
         self.animation.set_frames('right_idle')
 
         self.rect.x = self.screen_rect.midleft[0]
@@ -204,6 +231,9 @@ class Player(Sprite):
         # TODO use state pattern for state of player
         self.state = MoveDownState(self)
         self.direction_facing = Direction.RIGHT
+
+        #TODO move around
+        self.damage = 10
 
         # player inits and sets the stage for with his vect that vect whereever he starts is 0
 
@@ -248,6 +278,9 @@ class Player(Sprite):
     def calculate_jump_height(self):
         self.jump_height = self.vector.y - self.player_constants.MAX_JUMP_HEIGHT
 
+    def take_damage(self, damage):
+        pass
+
     def change_state(self, key, down):
         print(type(self.state))
         if type(self.state) is IdleState and down:
@@ -267,6 +300,8 @@ class Player(Sprite):
         elif type(self.state) is WalkState:
             if key == pygame.K_SPACE and down:
                 self.state = JumpUpWalkState(self)
+            elif key == pygame.K_a and down:
+                self.state = MovingAttackState(self)
             elif key == pygame.K_RIGHT and not down:
                 self.state = IdleState(self)
             elif key == pygame.K_LEFT and not down:
@@ -283,3 +318,9 @@ class Player(Sprite):
                 self.state = MoveUpState(self)
             elif key == pygame.K_RIGHT:
                 self.state = MoveUpState(self)
+        elif type(self.state) is MovingAttackState and not down:
+            if key == pygame.K_LEFT:
+                self.state = AttackState(self)
+            elif key == pygame.K_RIGHT:
+                self.state = AttackState(self)
+

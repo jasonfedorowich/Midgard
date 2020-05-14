@@ -68,8 +68,8 @@ class Level:
             return True
         return False
 
-    def check_player_enemy_collisions(self, player):
-        collisions = pygame.sprite.spritecollide(player, self.enemies, False, _enemy_player_collision)
+    def check_player_enemy_collisions(self):
+        collisions = pygame.sprite.spritecollide(self.game.player, self.enemies, False, _enemy_player_collision)
 
     def collide_with_wall(self, player):
         collisions = pygame.sprite.spritecollideany(player, self.walls, _wall_player_collision)

@@ -40,7 +40,7 @@ class PlayerState:
             if self.player.game.level.collide_with_wall(self.player):
                 self.player.vector.x = old_pos
 
-        self.player.game.level.check_player_enemy_collisions(self.player)
+
 
 
 class WalkState(PlayerState):
@@ -280,47 +280,4 @@ class Player(Sprite):
 
     def take_damage(self, damage):
         pass
-
-    def change_state(self, key, down):
-        print(type(self.state))
-        if type(self.state) is IdleState and down:
-            if key == pygame.K_LEFT:
-                self.direction_facing = Direction.LEFT
-                self.state = WalkState(self)
-
-            elif key == pygame.K_RIGHT:
-                self.direction_facing = Direction.RIGHT
-                self.state = WalkState(self)
-
-            elif key == pygame.K_SPACE:
-                self.state = MoveUpState(self)
-            elif key == pygame.K_a:
-                self.state = AttackState(self)
-
-        elif type(self.state) is WalkState:
-            if key == pygame.K_SPACE and down:
-                self.state = JumpUpWalkState(self)
-            elif key == pygame.K_a and down:
-                self.state = MovingAttackState(self)
-            elif key == pygame.K_RIGHT and not down:
-                self.state = IdleState(self)
-            elif key == pygame.K_LEFT and not down:
-                self.state = IdleState(self)
-
-        elif type(self.state) is JumpDownWalkState and not down:
-            if key == pygame.K_LEFT:
-                self.state = MoveDownState(self)
-            elif key == pygame.K_RIGHT:
-                self.state = MoveDownState(self)
-
-        elif type(self.state) is JumpUpWalkState and not down:
-            if key == pygame.K_LEFT:
-                self.state = MoveUpState(self)
-            elif key == pygame.K_RIGHT:
-                self.state = MoveUpState(self)
-        elif type(self.state) is MovingAttackState and not down:
-            if key == pygame.K_LEFT:
-                self.state = AttackState(self)
-            elif key == pygame.K_RIGHT:
-                self.state = AttackState(self)
 

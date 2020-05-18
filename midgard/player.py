@@ -25,22 +25,24 @@ class PlayerState:
     def update(self):
         pass
 
-    def _update_x(self, direction):
-        if direction == 'right':
+    def _update_x(self):
+        if self.player.direction_facing == Direction.RIGHT:
             old_pos = self.player.vector.x
             self.player.vector.x += MAX_HERO_SPEED
 
             if self.player.game.level.collide_with_wall(self.player):
                 self.player.vector.x = old_pos
 
-        elif direction == 'left':
+        elif self.player.direction_facing == Direction.LEFT:
             old_pos = self.player.vector.x
             self.player.vector.x -= MAX_HERO_SPEED
 
             if self.player.game.level.collide_with_wall(self.player):
                 self.player.vector.x = old_pos
 
-
+    @abstractmethod
+    def change_state(self, key, down):
+        pass
 
 
 class WalkState(PlayerState):
@@ -52,17 +54,30 @@ class WalkState(PlayerState):
     def update(self):
         if self.player.direction_facing == Direction.RIGHT:
             self.player.animation.set_frames('right_walking')
-            self._update_x( 'right')
+            self._update_x()
 
         else:
             self.player.animation.set_frames('left_walking')
-            self._update_x( 'left')
+            self._update_x()
 
         if not self.player.game.level.is_on_platform(self.player):
             self.player.state = MoveDownState(self.player)
 
+    def change_state(self, key, down):
+        if key == pygame.K_SPACE and down:
+            self.player.state = JumpUpWalkState(self.player)
+        elif key == pygame.K_a and down:
+            self.player.state = MovingAttackState(self.player)
+        elif key == pygame.K_RIGHT and not down:
+            self.player.state = IdleState(self.player)
+        elif key == pygame.K_LEFT and not down:
+            self.player.state = IdleState(self.player)
+
 
 class MoveUpState(PlayerState):
+
+    def change_state(self, key, down):
+        pass
 
     def __init__(self, player):
         super().__init__(player)
@@ -83,6 +98,9 @@ class MoveUpState(PlayerState):
 
 class MoveDownState(PlayerState):
 
+    def change_state(self, key, down):
+        pass
+
     def __init__(self, player):
         super().__init__(player)
 
@@ -101,6 +119,19 @@ class MoveDownState(PlayerState):
 
 class IdleState(PlayerState):
 
+    def change_state(self, key, down):
+        if down:
+            if key == pygame.K_LEFT:
+                self.player.direction_facing = Direction.LEFT
+                self.player.state = WalkState(self.player)
+            elif key == pygame.K_RIGHT:
+                self.player.direction_facing = Direction.RIGHT
+                self.player.state = WalkState(self.player)
+            elif key == pygame.K_SPACE:
+                self.player.state = MoveUpState(self.player)
+            elif key == pygame.K_a:
+                self.player.state = AttackState(self.player)
+
     def __init__(self, player):
         super().__init__(player)
         pass
@@ -113,6 +144,9 @@ class IdleState(PlayerState):
 
 
 class AttackState(PlayerState):
+
+    def change_state(self, key, down):
+        pass
 
     def __init__(self, player):
         super().__init__(player)
@@ -128,16 +162,24 @@ class AttackState(PlayerState):
 
 
 class JumpDownWalkState(PlayerState):
+
+    def change_state(self, key, down):
+        if not down:
+            if key == pygame.K_LEFT:
+                self.player.state = MoveDownState(self.player)
+            elif key == pygame.K_RIGHT:
+                self.player.state = MoveDownState(self.player)
+
     def __init__(self, player):
         super().__init__(player)
 
     def update(self):
         if self.player.direction_facing == Direction.RIGHT:
             self.player.animation.set_frames('right_jump')
-            self._update_x( 'right')
+            self._update_x()
         else:
             self.player.animation.set_frames('left_jump')
-            self._update_x( 'left')
+            self._update_x()
 
         if self.player.game.level.collide_with_platform(self.player):
             self.player.state = WalkState(self.player)
@@ -147,6 +189,13 @@ class JumpDownWalkState(PlayerState):
 
 class JumpUpWalkState(PlayerState):
 
+    def change_state(self, key, down):
+        if not down:
+            if key == pygame.K_LEFT:
+                self.player.state = MoveUpState(self.player)
+            elif key == pygame.K_RIGHT:
+                self.player.state = MoveUpState(self.player)
+
     def __init__(self, player):
         super().__init__(player)
         self.player.calculate_jump_height()
@@ -154,10 +203,10 @@ class JumpUpWalkState(PlayerState):
     def update(self):
         if self.player.direction_facing == Direction.RIGHT:
             self.player.animation.set_frames('right_jump')
-            self._update_x( 'right')
+            self._update_x()
         else:
             self.player.animation.set_frames('left_jump')
-            self._update_x( 'left')
+            self._update_x()
 
         if self.player.vector.y <= self.player.jump_height:
             self.player.state = JumpDownWalkState(self.player)
@@ -166,6 +215,13 @@ class JumpUpWalkState(PlayerState):
 
 
 class MovingAttackState(PlayerState):
+
+    def change_state(self, key, down):
+        if not down:
+            if key == pygame.K_LEFT:
+                self.player.state = AttackState(self.player)
+            elif key == pygame.K_RIGHT:
+                self.player.state = AttackState(self.player)
 
     def __init__(self, player):
         super().__init__(player)
@@ -176,12 +232,12 @@ class MovingAttackState(PlayerState):
             if self.player.animation.set_frames('right_attack'):
                 self.player.state = WalkState(self.player)
                 return
-            self._update_x('right')
+            self._update_x()
         else:
             if self.player.animation.set_frames('left_attack'):
                 self.player.state = WalkState(self.player)
                 return
-            self._update_x('left')
+            self._update_x()
 
         if not self.player.game.level.is_on_platform(self.player):
             self.player.state = MoveDownState(self.player)

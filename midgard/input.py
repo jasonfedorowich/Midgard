@@ -56,7 +56,9 @@ class InputManager:
         for event in pygame.event.get():
 
             if event.type == pygame.QUIT:
+                self.controller.__destroy__()
                 sys.exit()
+
             elif event.type == pygame.KEYDOWN:
                 self._handle_keydown_events(event.key)
 
@@ -107,58 +109,21 @@ class InputManager:
         axes = self.controller.get_axis()
         x_val = axes[0]
         y_val = axes[1]
-        if 0.5 > y_val > -0.5:
-            if x_val > 0.07:
-                self._change_player_state(pygame.K_RIGHT, True)
-            elif x_val < -0.07:
-                self._change_player_state(pygame.K_LEFT, True)
+        print(x_val)
+        print('--------')
 
-            elif 0 <= x_val <= 0.07:
-                self._change_player_state(pygame.K_RIGHT, False)
-            elif -0.07 <= x_val <= 0:
-                self._change_player_state(pygame.K_LEFT, False)
+        if x_val > 0.1:
+            self._change_player_state(pygame.K_RIGHT, True)
+        elif x_val < -0.1:
+            self._change_player_state(pygame.K_LEFT, True)
+
+        elif 0 <= x_val <= 0.1:
+            self._change_player_state(pygame.K_RIGHT, False)
+        elif -0.1 <= x_val <= 0:
+            self._change_player_state(pygame.K_LEFT, False)
 
     def _change_player_state(self, key, down):
-        if type(self.player.state) is IdleState and down:
-            if key == pygame.K_LEFT:
-                self.player.direction_facing = Direction.LEFT
-                self.player.state = WalkState(self.player)
-
-            elif key == pygame.K_RIGHT:
-                self.player.direction_facing = Direction.RIGHT
-                self.player.state = WalkState(self.player)
-
-            elif key == pygame.K_SPACE:
-                self.player.state = MoveUpState(self.player)
-            elif key == pygame.K_a:
-                self.player.state = AttackState(self.player)
-
-        elif type(self.player.state) is WalkState:
-            if key == pygame.K_SPACE and down:
-                self.player.state = JumpUpWalkState(self.player)
-            elif key == pygame.K_a and down:
-                self.player.state = MovingAttackState(self.player)
-            elif key == pygame.K_RIGHT and not down:
-                self.player.state = IdleState(self.player)
-            elif key == pygame.K_LEFT and not down:
-                self.player.state = IdleState(self.player)
-
-        elif type(self.player.state) is JumpDownWalkState and not down:
-            if key == pygame.K_LEFT:
-                self.player.state = MoveDownState(self.player)
-            elif key == pygame.K_RIGHT:
-                self.player.state = MoveDownState(self.player)
-
-        elif type(self.player.state) is JumpUpWalkState and not down:
-            if key == pygame.K_LEFT:
-                self.player.state = MoveUpState(self.player)
-            elif key == pygame.K_RIGHT:
-                self.player.state = MoveUpState(self.player)
-        elif type(self.player.state) is MovingAttackState and not down:
-            if key == pygame.K_LEFT:
-                self.player.state = AttackState(self.player)
-            elif key == pygame.K_RIGHT:
-                self.player.state = AttackState(self.player)
+        self.player.state.change_state(key, down)
 
 
 class Controller:

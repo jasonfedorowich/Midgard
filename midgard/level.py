@@ -5,7 +5,7 @@ from pygame.sprite import Sprite
 
 from midgard.constants import LEVEL_SCALE_WIDTH, LEVEL_SCALE_HEIGHT, LEVEL_WIDTH_CORRECTION
 from midgard.player import AttackState, MovingAttackState
-from midgard.sprite import Renderable, NonRenderable, Enemy, EnemyType
+from midgard.sprite import Renderable, NonRenderable, Enemy, EnemyType, DeadSprite
 from midgard.vector2d import Vector2D
 
 
@@ -107,12 +107,19 @@ class Level:
         self.enemies.add(enemy)
 
     def update(self):
-        for enemy in self.enemies:
+        self.check_player_enemy_collisions()
+        self._update_enemies()
+
+    def _update_enemies(self):
+
+        for enemy in self.enemies.copy():
+
             if self.camera.vector.x - 100 <= enemy.vector.x <= self.camera.vector.x + self.camera.width:
                 enemy.state = Renderable(enemy)
                 enemy.update()
             else:
                 enemy.state = NonRenderable(enemy)
+        pass
 
 
 # TODO add rect to platform and wall do we need two classes? """
@@ -164,9 +171,12 @@ def _enemy_player_collision(player, enemy):
             if type(player.state) is AttackState or type(player.state) is MovingAttackState:
                 enemy.take_damage(player.damage)
                 print('enemy take damage')
+                return True
+
             else:
                 player.take_damage(enemy.damage)
                 print('player take damage')
+                return False
 
 
 class Platform(Sprite):

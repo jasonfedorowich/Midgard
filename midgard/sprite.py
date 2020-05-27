@@ -45,28 +45,40 @@ class SpriteSheet:
         return images
 
 
-class SpriteState:
+class RenderState:
     def __init__(self, enemy):
         self.enemy = enemy
         pass
 
 
-class Renderable(SpriteState):
+class Renderable(RenderState):
     def __init__(self, enemy):
         super().__init__(enemy)
 
 
-class NonRenderable(SpriteState):
+class NonRenderable(RenderState):
     def __init__(self, enemy):
         super().__init__(enemy)
 
 
 class EnemyType(Enum):
-    SOILDER = (1, 2.00)
+    SOILDER = (1, 2.00, 100)
 
-    def __init__(self, number, scale):
+    def __init__(self, number, scale, health):
         self.number = number
         self.scale = scale
+        self.health = health
+
+
+class Direction(Enum):
+    LEFT = 1
+    RIGHT = 2
+
+
+class FrameState(Enum):
+    IDLE = 1
+    DAMAGED = 2
+    DEAD = 3
 
 
 class Enemy(Sprite):
@@ -83,33 +95,72 @@ class Enemy(Sprite):
         self.animation = Animation(self.sprite_sheet_dictionary, 100)
         self.state = NonRenderable(self)
         self.animation.set_frames('left_idle')
-
-        self.image = self.animation.current_animation_with_scale(type.value[1])
+        self.scale = type.value[1]
+        self.image = self.animation.current_animation_with_scale(self.scale)
         self.rect = self.image.get_rect()
         self.rect.left = self.vector.x
         self.rect.bottom = self.vector.y
         self.type = type
-
+        self.health = type.value[2]
         #TODO move out
         self.damage = 10
+        self.direction = Direction.LEFT
+        self.framestate = FrameState.IDLE
 
     def blitme(self):
         self.rect.x = self.vector.x - self.level.camera.vector.x + self.rect.width
-        self.level.game.screen.blit(self.animation.current_animation_with_scale(self.type.value[1]), self.rect)
+        self.level.game.screen.blit(self.animation.current_animation_with_scale(self.scale), self.rect)
         #pygame.draw.rect(self.level.game.screen, pygame.Color('red'), self.rect)
 
     def update(self):
-        self.animation.set_frames('left_idle')
+        if self.framestate == FrameState.DAMAGED:
+            if self.animation.run_current_frames():
+                if self.direction == Direction.LEFT:
+                    self.animation.set_frames('left_idle')
+                else:
+                    self.animation.set_frames('right_idle')
+
+        elif self.framestate == FrameState.DEAD:
+            if self.animation.run_current_frames():
+                self.kill()
+        else:
+            self.animation.run_current_frames()
 
     def take_damage(self, damage):
-        pass
+        self.health -= damage
+        if self.health <= 0:
+            if self.direction == Direction.LEFT:
+                self.animation.set_frames('left_dead')
+            else:
+                self.animation.set_frames('right_dead')
+
+            self.framestate = FrameState.DEAD
+
+        else:
+            if self.direction == Direction.LEFT:
+                self.animation.set_frames('left_damage')
+
+            else:
+                self.animation.set_frames('right_damage')
+
+            self.framestate = FrameState.DAMAGED
+
 
     @classmethod
     def init(cls):
         enemy_constants = EnemyConstants()
         soilder_spritesheet = SpriteSheet(enemy_constants.SOILDER_FILE_LOCATION)
         soilder_map = {
-            'left_idle': soilder_spritesheet.get_images([(4, 6, 22, 26), (36, 5, 23, 32), (133, 6, 20, 24)], True)}
+            'left_idle': soilder_spritesheet.get_images([(4, 6, 22, 26), (36, 5, 23, 32), (133, 6, 20, 24)], True),
+            'right_idle': soilder_spritesheet.get_images([(4, 6, 22, 26), (36, 5, 23, 32), (133, 6, 20, 24)], False),
+            'left_damage': soilder_spritesheet.get_images([(4, 102, 22, 26), (35, 103, 25, 26), (66, 99, 32, 30)], True),
+            'right_damage': soilder_spritesheet.get_images([(4, 102, 22, 26), (35, 103, 25, 26), (66, 99, 32, 30)], False),
+            'left_dead': soilder_spritesheet.get_images([(4, 134, 22, 24), (36, 134, 24, 24), (66, 134, 30, 24), (100, 134, 25, 24), (161, 134, 29, 24), (193, 134, 31, 24)], True),
+            'right_dead': soilder_spritesheet.get_images(
+                [(4, 134, 22, 24), (36, 134, 24, 24), (66, 134, 30, 24), (100, 134, 25, 24), (161, 134, 29, 24),
+                 (193, 134, 31, 24)], False)
+
+        }
 
         Enemy.sprite_sheet_dictionaries[EnemyType.SOILDER] = soilder_map
 

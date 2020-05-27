@@ -44,7 +44,6 @@ class Game:
 
             if self.game_active:
                 self.input.process_events()
-                self.level.check_player_enemy_collisions()
                 self.player.update()
                 self.update_fps()
                 self.level.update()

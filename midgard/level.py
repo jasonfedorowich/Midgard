@@ -5,7 +5,8 @@ from pygame.sprite import Sprite
 
 from midgard.constants import LEVEL_SCALE_WIDTH, LEVEL_SCALE_HEIGHT, LEVEL_WIDTH_CORRECTION
 from midgard.player import AttackState, MovingAttackState
-from midgard.sprite import Renderable, NonRenderable, Enemy, EnemyType, DeadSprite
+from midgard.sprite import Renderable, NonRenderable, Enemy, EnemyType
+from midgard.timer import QuietTimeout
 from midgard.vector2d import Vector2D
 
 
@@ -77,6 +78,22 @@ class Level:
             return True
         return False
 
+    def reset(self):
+        self.clear()
+        self.start()
+
+    def start(self):
+        self._add_player()
+        self._construct_platforms()
+        self._construct_walls()
+        self._add_enemies()
+
+    @abstractmethod
+    def clear(self):
+        self.enemies.empty()
+        self.platforms.empty()
+        self.walls.empty()
+
     @abstractmethod
     def _construct_platforms(self):
         pass
@@ -87,6 +104,10 @@ class Level:
 
     @abstractmethod
     def _add_enemies(self):
+        pass
+
+    @abstractmethod
+    def _add_player(self):
         pass
 
     def _add_platform(self, start, end):
@@ -112,14 +133,22 @@ class Level:
 
     def _update_enemies(self):
 
-        for enemy in self.enemies.copy():
+        for enemy in self.enemies:
 
-            if self.camera.vector.x - 100 <= enemy.vector.x <= self.camera.vector.x + self.camera.width:
+            if type(enemy.state) is Renderable and self.camera.vector.x - 100 <= enemy.vector.x <= self.camera.vector.x + self.camera.width:
+                enemy.update()
+
+            elif self.camera.vector.x - 100 <= enemy.vector.x <= self.camera.vector.x + self.camera.width and type(enemy.state) is NonRenderable:
                 enemy.state = Renderable(enemy)
                 enemy.update()
             else:
                 enemy.state = NonRenderable(enemy)
+                enemy.check_timeouts()
+
+
         pass
+
+
 
 
 # TODO add rect to platform and wall do we need two classes? """
@@ -167,16 +196,15 @@ def _wall_player_collision(player, wall):
 def _enemy_player_collision(player, enemy):
     if type(enemy.state) is Renderable:
         if player.rect.colliderect(enemy.rect):
-            print('collision')
             if type(player.state) is AttackState or type(player.state) is MovingAttackState:
                 enemy.take_damage(player.damage)
-                print('enemy take damage')
-                return True
+                player.timeout = QuietTimeout(2000, player)
 
             else:
                 player.take_damage(enemy.damage)
-                print('player take damage')
-                return False
+            return True
+
+    return False
 
 
 class Platform(Sprite):
@@ -215,9 +243,14 @@ class Level1(Level):
 
     def __init__(self, game, camera, image_file):
         super().__init__(game, camera, image_file)
-        self._construct_platforms()
-        self._construct_walls()
-        self._add_enemies()
+
+    def clear(self):
+        super().clear()
+
+    def _add_player(self):
+        self.game.player.start()
+        self.game.player.player_on_screen_pos(50)
+
 
     def _construct_platforms(self):
         self._add_platform((0, 165 * LEVEL_SCALE_HEIGHT),
@@ -236,6 +269,6 @@ class Level1(Level):
         pass
 
     def _add_enemies(self):
-        self._add_enemy(Enemy.create_enemy(EnemyType.SOILDER, 410 * LEVEL_SCALE_WIDTH - LEVEL_WIDTH_CORRECTION + 50,
+        self._add_enemy(Enemy.create_enemy(EnemyType.SOILDER, 600 * LEVEL_SCALE_WIDTH - LEVEL_WIDTH_CORRECTION + 50,
                                            120 * LEVEL_SCALE_HEIGHT, self))
         pass

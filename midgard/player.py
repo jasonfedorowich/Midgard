@@ -7,6 +7,7 @@ from pygame.sprite import Sprite
 from midgard.animation import Animation
 from midgard.constants import HeroConstants, MAX_HERO_SPEED, HERO_HEIGHT_CORRECTION
 from midgard.sprite import SpriteSheet
+from midgard.timer import QuietTimeout
 from midgard.vector2d import Vector2D
 
 
@@ -243,6 +244,59 @@ class MovingAttackState(PlayerState):
             self.player.state = MoveDownState(self.player)
 
 
+class DeadState(PlayerState):
+
+    def change_state(self, key, down):
+        pass
+
+    def update(self):
+        if self.player.direction_facing == Direction.RIGHT:
+            if self.player.animation.set_frames('right_dead'):
+                self.player.level.reset()
+        else:
+            if self.player.animation.set_frames('left_dead'):
+                self.player.level.reset()
+
+    def __init__(self, player):
+        super().__init__(player)
+
+
+class DamageState(PlayerState):
+
+    def change_state(self, key, down):
+        if not self.is_on_platform:
+            if down:
+                if key == pygame.K_LEFT:
+                    self.player.direction_facing = Direction.LEFT
+                    self.player.state = WalkState(self.player)
+                elif key == pygame.K_RIGHT:
+                    self.player.direction_facing = Direction.RIGHT
+                    self.player.state = WalkState(self.player)
+                elif key == pygame.K_SPACE:
+                    self.player.state = MoveUpState(self.player)
+                elif key == pygame.K_a:
+                    self.player.state = AttackState(self.player)
+
+    def update(self):
+        if self.is_on_platform:
+            if not self.player.game.level.collide_with_platform(self.player):
+                self.player.vector.y += self.player.player_constants.jump_speed
+
+        else:
+            self.is_on_platform = True
+
+        if self.player.direction_facing == Direction.LEFT:
+            if self.player.animation.set_frames('left_damage'):
+                self.player.state = IdleState(self.player)
+        else:
+            if self.player.animation.set_frames('right_damage'):
+                self.player.state = IdleState(self.player)
+
+    def __init__(self, player):
+        super().__init__(player)
+        self.is_on_platform = player.game.level.collide_with_platform(self.player)
+
+
 class Player(Sprite):
 
     def __init__(self, game):
@@ -269,6 +323,10 @@ class Player(Sprite):
         self.vector = Vector2D()
 
         self.animation = Animation(self.hero_spritesheet_dictionary, 100)
+
+        # player inits and sets the stage for with his vect that vect whereever he starts is 0
+
+    def start(self):
         self.animation.set_frames('right_idle')
 
         self.rect.x = self.screen_rect.midleft[0]
@@ -276,22 +334,24 @@ class Player(Sprite):
         self.rect.bottom = self.rect.bottom - 10 * self.player_constants.HERO_SCALE_SIZE
         self.rect.height = self.rect.height - HERO_HEIGHT_CORRECTION
 
-        #self.rect.x = self.rect.x + 10
-
-
-        print(self.rect.width)
+        # self.rect.x = self.rect.x + 10
 
 
         self.vector.y = float(self.rect.bottom)
-
         # TODO use state pattern for state of player
         self.state = MoveDownState(self)
         self.direction_facing = Direction.RIGHT
-
-        #TODO move around
+        self.vector.x = 0
+        # TODO move around
         self.damage = 10
+        self.health = 300
+        self.timeout = None
+        self.previous_pos = self.vector.x
 
-        # player inits and sets the stage for with his vect that vect whereever he starts is 0
+    def player_on_screen_pos(self, pos):
+        self.rect.x += pos
+        self.vector.x += pos
+        self.previous_pos = self.vector.x
 
     def blitme(self):
 
@@ -325,15 +385,49 @@ class Player(Sprite):
             self.player_constants.right_attack_list,
             False)
 
+        hero_spritesheet_dictionary['right_damage'] = hero_spritesheet.get_images(self.player_constants.right_damage_list, True)
+        hero_spritesheet_dictionary['left_damage'] = hero_spritesheet.get_images(self.player_constants.right_damage_list, False)
+        hero_spritesheet_dictionary['right_dead'] = hero_spritesheet.get_images(self.player_constants.right_dead_list, True)
+        hero_spritesheet_dictionary['left_dead'] = hero_spritesheet.get_images(self.player_constants.right_dead_list, False)
+
     def update(self):
         self.state.update()
-        self.camera.vector.x = self.vector.x
+        self._update_camera()
         self.rect.bottom = self.vector.y
+        self.check_timeouts()
         # print(self.camera.vector.x)
 
     def calculate_jump_height(self):
         self.jump_height = self.vector.y - self.player_constants.MAX_JUMP_HEIGHT
 
     def take_damage(self, damage):
+        if self.timeout is None:
+
+            self.health -= damage
+            if self.health <= 0:
+                self.state = DeadState(self)
+
+            else:
+                self.state = DamageState(self)
+
+            self.timeout = QuietTimeout(4000, self)
+
+        else:
+            pass
+
+
         pass
+
+    def remove_timeout(self):
+        self.timeout = None
+
+    #TODO may want to move camera updates outside of player
+    def _update_camera(self):
+        change = self.vector.x - self.previous_pos
+        self.camera.vector.x += change
+        self.previous_pos = self.vector.x
+
+    def check_timeouts(self):
+        if self.timeout is not None:
+            self.timeout.tick()
 

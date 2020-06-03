@@ -2,8 +2,7 @@ import sys
 import pygame
 
 from midgard.camera import Camera
-from midgard.constants import LEVEL_SCALE_HEIGHT, LEVEL_SCALE_WIDTH
-from midgard.input import Controller, buttons_to_keys, InputManager
+from midgard.input import InputManager
 from midgard.level import Level1
 from midgard.player import Player
 from midgard.settings import Settings
@@ -27,6 +26,7 @@ class Game:
         # self.camera.update_viewport(self.camera.vector.x + 2000, self.camera.vector.y)
         self.level = Level1(self, self.camera, '../images/level1.bmp')
         self.player = Player(self)
+        self.level.start()
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont('Arial', 18)
         self.game_running = True

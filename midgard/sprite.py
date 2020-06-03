@@ -5,6 +5,7 @@ from pygame.sprite import Sprite
 
 from midgard.animation import Animation
 from midgard.constants import EnemyConstants
+from midgard.timer import Timeout, QuietTimeout
 from midgard.vector2d import Vector2D
 
 
@@ -62,12 +63,13 @@ class NonRenderable(RenderState):
 
 
 class EnemyType(Enum):
-    SOILDER = (1, 2.00, 100)
+    SOILDER = (1, 2.00, 10, 10)
 
-    def __init__(self, number, scale, health):
+    def __init__(self, number, scale, health, damage):
         self.number = number
         self.scale = scale
         self.health = health
+        self.damage = damage
 
 
 class Direction(Enum):
@@ -81,7 +83,7 @@ class FrameState(Enum):
     DEAD = 3
 
 
-class Enemy(Sprite):
+class Enemy(Sprite, object):
     sprite_sheet_dictionaries = {}
 
     def __init__(self, x, y, type, level):
@@ -103,9 +105,10 @@ class Enemy(Sprite):
         self.type = type
         self.health = type.value[2]
         #TODO move out
-        self.damage = 10
+        self.damage = type.value[3]
         self.direction = Direction.LEFT
         self.framestate = FrameState.IDLE
+        self.timeout = None
 
     def blitme(self):
         self.rect.x = self.vector.x - self.level.camera.vector.x + self.rect.width
@@ -123,28 +126,46 @@ class Enemy(Sprite):
         elif self.framestate == FrameState.DEAD:
             if self.animation.run_current_frames():
                 self.kill()
+                return
         else:
             self.animation.run_current_frames()
 
-    def take_damage(self, damage):
-        self.health -= damage
-        if self.health <= 0:
-            if self.direction == Direction.LEFT:
-                self.animation.set_frames('left_dead')
-            else:
-                self.animation.set_frames('right_dead')
+        self.check_timeouts()
 
-            self.framestate = FrameState.DEAD
+
+    def take_damage(self, damage):
+        if self.timeout is None:
+
+            self.health -= damage
+            if self.health <= 0:
+                if self.direction == Direction.LEFT:
+                    self.animation.set_frames('left_dead')
+                else:
+                    self.animation.set_frames('right_dead')
+
+                self.framestate = FrameState.DEAD
+
+            else:
+                if self.direction == Direction.LEFT:
+                    self.animation.set_frames('left_damage')
+
+                else:
+                    self.animation.set_frames('right_damage')
+
+                self.framestate = FrameState.DAMAGED
+
+            self.timeout = QuietTimeout(2000, self)
 
         else:
-            if self.direction == Direction.LEFT:
-                self.animation.set_frames('left_damage')
+            pass
 
-            else:
-                self.animation.set_frames('right_damage')
+    def check_timeouts(self):
+        if self.timeout is not None:
 
-            self.framestate = FrameState.DAMAGED
+            self.timeout.tick()
 
+    def remove_timeout(self):
+        self.timeout = None
 
     @classmethod
     def init(cls):
@@ -167,3 +188,5 @@ class Enemy(Sprite):
     @classmethod
     def create_enemy(cls, type, x, y, level):
         return Enemy(x, y, type, level)
+
+

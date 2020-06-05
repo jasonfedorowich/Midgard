@@ -252,13 +252,19 @@ class DeadState(PlayerState):
     def update(self):
         if self.player.direction_facing == Direction.RIGHT:
             if self.player.animation.set_frames('right_dead'):
-                self.player.level.reset()
+                self.player.game.level.reset()
         else:
             if self.player.animation.set_frames('left_dead'):
-                self.player.level.reset()
+                self.player.game.level.reset()
+
 
     def __init__(self, player):
         super().__init__(player)
+        IMAGE_CORRECTION = 20
+        self.player.vector.y = self.player.vector.y + IMAGE_CORRECTION
+        self.player.rect.y = self.player.rect.y + IMAGE_CORRECTION
+
+
 
 
 class DamageState(PlayerState):
@@ -308,25 +314,27 @@ class Player(Sprite):
         self.screen_rect = self.screen.get_rect()
         self.game = game
 
-        hero_spritesheet = SpriteSheet(self.player_constants.PLAYER_SPRITE_SHEET_LOCATION)
+        self.hero_spritesheet = SpriteSheet(self.player_constants.PLAYER_SPRITE_SHEET_LOCATION)
         self.hero_spritesheet_dictionary = {}
 
-        self._load_player_spritesheet(self.hero_spritesheet_dictionary, hero_spritesheet)
-        self.hero_image = hero_spritesheet.get_image(130, 8, 30, 30)
-        self.rect = self.hero_image.get_rect()
+        self._load_player_spritesheet(self.hero_spritesheet_dictionary, self.hero_spritesheet)
 
-        self.hero_image = pygame.transform.scale(self.hero_image,
-                                                 (int(self.rect.width * self.player_constants.HERO_SCALE_SIZE),
-                                                  int(self.rect.height * self.player_constants.HERO_SCALE_SIZE)))
-        self.rect = self.hero_image.get_rect()
+        self.animation = Animation(self.hero_spritesheet_dictionary, 100)
+        self.animation.set_frames('right_idle')
+
+        self.rect = self.animation.current_animation_with_scale(self.player_constants.HERO_SCALE_SIZE).get_rect()
 
         self.vector = Vector2D()
 
-        self.animation = Animation(self.hero_spritesheet_dictionary, 100)
+
+        self.timeout = None
 
         # player inits and sets the stage for with his vect that vect whereever he starts is 0
 
     def start(self):
+        self.animation.set_frames('right_idle')
+
+        self.rect = self.animation.current_animation_with_scale(self.player_constants.HERO_SCALE_SIZE).get_rect()
         self.animation.set_frames('right_idle')
 
         self.rect.x = self.screen_rect.midleft[0]
@@ -344,9 +352,10 @@ class Player(Sprite):
         self.vector.x = 0
         # TODO move around
         self.damage = 10
-        self.health = 300
+        self.health = 10
         self.timeout = None
         self.previous_pos = self.vector.x
+        self.camera.vector.x = 0
 
     def player_on_screen_pos(self, pos):
         self.rect.x += pos
@@ -354,7 +363,7 @@ class Player(Sprite):
         self.previous_pos = self.vector.x
 
     def blitme(self):
-
+        #TODO fit the rectangle on the rectanlge that is drawn
         self.screen.blit(self.animation.current_animation_with_scale(self.player_constants.HERO_SCALE_SIZE), self.rect)
 
         # pygame.draw.rect(self.screen, pygame.Color('red'), self.rect)
@@ -401,7 +410,7 @@ class Player(Sprite):
         self.jump_height = self.vector.y - self.player_constants.MAX_JUMP_HEIGHT
 
     def take_damage(self, damage):
-        if self.timeout is None:
+        if self.timeout is None and type(self.state) is not DeadState:
 
             self.health -= damage
             if self.health <= 0:
@@ -409,14 +418,10 @@ class Player(Sprite):
 
             else:
                 self.state = DamageState(self)
-
-            self.timeout = QuietTimeout(4000, self)
+                self.timeout = QuietTimeout(4000, self)
 
         else:
             pass
-
-
-        pass
 
     def remove_timeout(self):
         self.timeout = None
